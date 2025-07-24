@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Boy Emulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Game Boy Emulator</h1>
+        <div class="emulator">
+            <canvas id="screen" width="160" height="144"></canvas>
+            <div class="controls">
+                <input type="file" id="rom-input" accept=".gb,.gbc">
+                <button id="load-rom">Load ROM</button>
+            </div>
+        </div>
+        <div class="instructions">
+            <h2>Controls</h2>
+            <ul>
+                <li>Arrow Keys: D-Pad</li>
+                <li>Z: A Button</li>
+                <li>X: B Button</li>
+                <li>Enter: Start</li>
+                <li>Shift: Select</li>
+            </ul>
+        </div>
+    </div>
+    <script type="module" src="main.js"></script>
+</body>
+</html>

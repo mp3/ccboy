@@ -1,0 +1,22 @@
+[package]
+name = "ccboy"
+version = "0.1.0"
+edition = "2021"
+authors = ["Game Boy Emulator Team"]
+description = "A Game Boy emulator written in Rust with WebAssembly support"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["console", "Document", "Element", "HtmlCanvasElement", "WebGlRenderingContext", "CanvasRenderingContext2d", "ImageData", "Window"] }
+js-sys = "0.3"
+console_error_panic_hook = "0.1"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = "s"
+lto = true
