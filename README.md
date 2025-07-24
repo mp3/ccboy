@@ -1,36 +1,39 @@
 # Game Boy Emulator
 
-A Nintendo Game Boy emulator written in Rust with WebAssembly support.
+A fully-featured Nintendo Game Boy emulator written in Rust with WebAssembly support.
 
 ## Features
 
-- Game Boy CPU emulation (Sharp LR35902)
-- Memory management with cartridge support
-- PPU (Picture Processing Unit) for graphics rendering
-- Timer and interrupt system
-- Joypad input handling
-- WebAssembly support for running in web browsers
+- **Complete CPU emulation** - All 245 opcodes of the Sharp LR35902 processor
+- **Accurate PPU rendering** - Tile-based graphics with sprite support
+- **4-channel audio** - Square waves, wave pattern, and noise channels
+- **Memory Bank Controllers** - MBC1, MBC3, and MBC5 support
+- **Boot ROM** - Included DMG boot ROM for authentic startup
+- **WebAssembly support** - Runs directly in modern web browsers
+- **Debug interface** - CPU state inspection and memory access
 
 ## Project Status
 
-This emulator is currently in early development. Basic structure is in place, but many opcodes and features are not yet implemented.
+The emulator is feature-complete and can run most Game Boy games!
 
-### Completed
-- [x] Project structure with WebAssembly support
-- [x] Basic CPU framework
-- [x] Memory management system
-- [x] Basic PPU structure
-- [x] Timer implementation
-- [x] Joypad input framework
-- [x] Web interface
+### Completed ✅
+- [x] Full CPU implementation (LR35902 instruction set)
+- [x] Memory management with banking support
+- [x] PPU with background, window, and sprite layers
+- [x] APU with all 4 sound channels
+- [x] Timer and interrupt system
+- [x] Joypad input handling
+- [x] Boot ROM support
+- [x] MBC1/3/5 cartridge support
+- [x] WebAssembly build with web interface
+- [x] Debug features for development
 
-### TODO
-- [ ] Complete CPU instruction set (245 opcodes)
-- [ ] Full PPU implementation with sprite support
-- [ ] Audio Processing Unit (APU)
-- [ ] Memory Bank Controllers (MBC1, MBC3, MBC5)
+### Future Enhancements
+- [ ] Game Boy Color support
 - [ ] Save states
-- [ ] Debugging features
+- [ ] Rewind functionality
+- [ ] More MBC types
+- [ ] Link cable emulation
 
 ## Building
 
@@ -90,12 +93,15 @@ wasm-pack build --target web --out-dir pkg
 
 The emulator is structured as follows:
 
-- `cpu/`: LR35902 CPU emulation
+- `cpu/`: LR35902 CPU emulation with all opcodes
 - `memory/`: Memory management and cartridge handling
-- `ppu/`: Graphics rendering
+- `ppu/`: Graphics rendering with tile and sprite support
+- `apu/`: Audio processing with 4 channels
 - `timer.rs`: Timer and divider registers
 - `joypad.rs`: Input handling
 - `gameboy.rs`: Main emulation loop coordination
+- `boot_rom.rs`: DMG boot ROM data
+- `debug.rs`: Debugging utilities
 
 ## License
 

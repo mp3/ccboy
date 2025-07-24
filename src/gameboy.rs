@@ -4,6 +4,7 @@ use crate::memory::Memory;
 use crate::ppu::Ppu;
 use crate::timer::Timer;
 use crate::debug::CpuState;
+use crate::apu::Apu;
 
 const CYCLES_PER_FRAME: u32 = 70224;
 
@@ -13,6 +14,7 @@ pub struct GameBoy {
     ppu: Ppu,
     timer: Timer,
     joypad: Joypad,
+    apu: Apu,
     cycles: u32,
 }
 
@@ -23,6 +25,7 @@ impl GameBoy {
         let ppu = Ppu::new();
         let timer = Timer::new();
         let joypad = Joypad::new();
+        let apu = Apu::new();
 
         Self {
             cpu,
@@ -30,6 +33,7 @@ impl GameBoy {
             ppu,
             timer,
             joypad,
+            apu,
             cycles: 0,
         }
     }
@@ -44,6 +48,7 @@ impl GameBoy {
         
         self.timer.update(cycles, &mut self.memory);
         self.ppu.update(cycles, &mut self.memory);
+        self.apu.update(cycles, &mut self.memory);
         
         self.handle_interrupts();
     }
@@ -89,5 +94,9 @@ impl GameBoy {
     
     pub fn write_memory(&mut self, address: u16, value: u8) {
         self.memory.write_byte(address, value);
+    }
+    
+    pub fn get_audio_buffer(&mut self) -> Vec<f32> {
+        self.apu.get_audio_buffer()
     }
 }

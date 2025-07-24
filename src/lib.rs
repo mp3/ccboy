@@ -6,6 +6,7 @@ mod ppu;
 mod timer;
 mod boot_rom;
 mod debug;
+mod apu;
 
 use wasm_bindgen::prelude::*;
 pub use debug::CpuState;
@@ -60,6 +61,10 @@ impl Emulator {
     
     pub fn write_memory(&mut self, address: u16, value: u8) {
         self.gameboy.write_memory(address, value);
+    }
+    
+    pub fn get_audio_buffer(&mut self) -> Vec<f32> {
+        self.gameboy.get_audio_buffer()
     }
 }
 
