@@ -58,7 +58,14 @@ impl Ppu {
     }
 
     pub fn update(&mut self, cycles: u8, memory: &mut Memory) {
+        // Read LCDC from memory
+        self.lcdc = memory.read_byte(0xFF40);
+        
         if !self.is_lcd_enabled() {
+            self.line = 0;
+            self.cycles = 0;
+            self.mode = Mode::OamScan;
+            memory.write_byte(0xFF44, 0); // Reset LY
             return;
         }
 
@@ -82,6 +89,7 @@ impl Ppu {
                 if self.cycles >= 204 {
                     self.cycles -= 204;
                     self.line += 1;
+                    memory.write_byte(0xFF44, self.line); // Update LY register
 
                     if self.line == 144 {
                         self.mode = Mode::VBlank;
@@ -95,9 +103,12 @@ impl Ppu {
                 if self.cycles >= 456 {
                     self.cycles -= 456;
                     self.line += 1;
-
-                    if self.line > 153 {
+                    
+                    if self.line <= 153 {
+                        memory.write_byte(0xFF44, self.line); // Update LY register
+                    } else {
                         self.line = 0;
+                        memory.write_byte(0xFF44, 0); // Reset LY
                         self.mode = Mode::OamScan;
                     }
                 }

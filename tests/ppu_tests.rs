@@ -6,7 +6,22 @@ mod ppu_tests {
 
     fn create_test_emulator() -> Emulator {
         let mut emu = Emulator::new();
+        // Load a minimal ROM with initialization
+        let mut rom = vec![0xFF; 0x8000];
+        rom[0x0000] = 0x31; // LD SP, $FFFE
+        rom[0x0001] = 0xFE;
+        rom[0x0002] = 0xFF;
+        rom[0x0003] = 0x00; // NOP
+        rom[0x0004] = 0x18; // JR -2 (infinite loop)
+        rom[0x0005] = 0xFE;
+        
+        emu.load_rom(&rom);
         emu.write_memory(0xFF50, 0x01); // Disable boot ROM
+        
+        // Execute initialization
+        emu.step(); // LD SP
+        // Now CPU is in infinite loop at 0x0003
+        
         emu
     }
 
@@ -237,11 +252,27 @@ mod ppu_tests {
         // Clear interrupt flag
         emu.write_memory(0xFF0F, 0x00);
         
-        // Run one frame
-        emu.run_frame();
+        // Check initial state
+        println!("LCDC: 0x{:02X}", emu.read_memory(0xFF40));
+        println!("IF before: 0x{:02X}", emu.read_memory(0xFF0F));
+        println!("LY before: {}", emu.read_memory(0xFF44));
+        
+        // Run many steps to ensure PPU gets to V-Blank
+        // V-Blank happens at line 144, each line takes 456 cycles
+        // So we need at least 144 * 456 = 65664 cycles
+        for _ in 0..70000 {
+            emu.step();
+            let ly = emu.read_memory(0xFF44);
+            if ly >= 144 {
+                println!("Reached V-Blank at LY={}", ly);
+                break;
+            }
+        }
         
         // V-Blank interrupt should have been requested
         let if_reg = emu.read_memory(0xFF0F);
+        println!("IF after: 0x{:02X}", if_reg);
+        println!("LY after: {}", emu.read_memory(0xFF44));
         assert_ne!(if_reg & 0x01, 0); // V-Blank flag should be set
     }
 

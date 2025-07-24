@@ -68,10 +68,9 @@ impl Timer {
             }
         }
         
-        let tima_value = memory.read_byte(0xFF05);
-        if tima_value != self.tima {
-            self.tima = tima_value;
-        }
+        // Don't read TIMA from memory - we manage it internally
+        // Only write it to memory
+        memory.write_byte(0xFF05, self.tima);
         
         let tma_value = memory.read_byte(0xFF06);
         if tma_value != self.tma {
@@ -84,7 +83,7 @@ impl Timer {
         }
         
         memory.write_byte(0xFF04, (self.div >> 8) as u8);
-        memory.write_byte(0xFF05, self.tima);
+        // TIMA is already written above
         memory.write_byte(0xFF06, self.tma);
         memory.write_byte(0xFF07, self.tac);
     }
