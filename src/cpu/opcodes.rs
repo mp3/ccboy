@@ -1,4 +1,4 @@
-use super::Cpu;
+use super::{Cpu, opcodes_extended, opcodes_alu};
 use crate::memory::Memory;
 
 pub fn execute(cpu: &mut Cpu, opcode: u8, memory: &mut Memory) -> u8 {
@@ -124,21 +124,22 @@ pub fn execute(cpu: &mut Cpu, opcode: u8, memory: &mut Memory) -> u8 {
         }
         
         _ => {
-            panic!("Unimplemented opcode: 0x{:02X} at PC: 0x{:04X}", opcode, cpu.registers.pc.wrapping_sub(1));
+            // Try ALU opcodes first
+            let cycles = opcodes_alu::execute_alu(cpu, opcode, memory);
+            if cycles != 0 {
+                return cycles;
+            }
+            
+            // Try extended opcodes
+            let cycles = opcodes_extended::execute_extended(cpu, opcode, memory);
+            if cycles == 0 {
+                panic!("Unimplemented opcode: 0x{:02X} at PC: 0x{:04X}", opcode, cpu.registers.pc.wrapping_sub(1));
+            }
+            cycles
         }
     }
 }
 
-fn execute_cb(cpu: &mut Cpu, opcode: u8, _memory: &mut Memory) -> u8 {
-    match opcode {
-        0x7C => { // BIT 7, H
-            cpu.registers.set_flag_z((cpu.registers.h & 0x80) == 0);
-            cpu.registers.set_flag_n(false);
-            cpu.registers.set_flag_h(true);
-            8
-        }
-        _ => {
-            panic!("Unimplemented CB opcode: 0xCB{:02X}", opcode);
-        }
-    }
+fn execute_cb(cpu: &mut Cpu, opcode: u8, memory: &mut Memory) -> u8 {
+    super::opcodes_cb::execute_cb(cpu, opcode, memory)
 }

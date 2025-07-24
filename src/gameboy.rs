@@ -3,6 +3,7 @@ use crate::joypad::Joypad;
 use crate::memory::Memory;
 use crate::ppu::Ppu;
 use crate::timer::Timer;
+use crate::debug::CpuState;
 
 const CYCLES_PER_FRAME: u32 = 70224;
 
@@ -76,5 +77,17 @@ impl GameBoy {
         if interrupts != 0 {
             self.cpu.handle_interrupts(interrupts, &mut self.memory);
         }
+    }
+    
+    pub fn get_cpu_state(&self) -> CpuState {
+        CpuState::from_cpu(&self.cpu)
+    }
+    
+    pub fn read_memory(&self, address: u16) -> u8 {
+        self.memory.read_byte(address)
+    }
+    
+    pub fn write_memory(&mut self, address: u16, value: u8) {
+        self.memory.write_byte(address, value);
     }
 }

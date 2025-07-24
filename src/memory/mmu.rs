@@ -1,7 +1,9 @@
 use super::*;
 use crate::memory::cartridge::Cartridge;
+use crate::boot_rom::DMG_BOOT_ROM;
 
 pub struct Memory {
+    #[allow(dead_code)]
     rom: Vec<u8>,
     vram: [u8; VRAM_SIZE],
     wram: [u8; WRAM_SIZE],
@@ -11,6 +13,7 @@ pub struct Memory {
     interrupt_enable: u8,
     interrupt_flag: u8,
     cartridge: Option<Cartridge>,
+    boot_rom_enabled: bool,
 }
 
 impl Memory {
@@ -25,6 +28,7 @@ impl Memory {
             interrupt_enable: 0,
             interrupt_flag: 0,
             cartridge: None,
+            boot_rom_enabled: true,
         }
     }
 
@@ -34,6 +38,9 @@ impl Memory {
 
     pub fn read_byte(&self, address: u16) -> u8 {
         match address {
+            0x0000..=0x00FF if self.boot_rom_enabled => {
+                DMG_BOOT_ROM[address as usize]
+            }
             0x0000..=0x7FFF => {
                 if let Some(cart) = &self.cartridge {
                     cart.read_byte(address)
@@ -92,6 +99,7 @@ impl Memory {
     fn write_io(&mut self, address: u16, value: u8) {
         match address {
             0xFF0F => self.interrupt_flag = value,
+            0xFF50 => self.boot_rom_enabled = false, // Disable boot ROM
             _ => self.io[(address - 0xFF00) as usize] = value,
         }
     }

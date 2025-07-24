@@ -15,16 +15,16 @@ pub struct Registers {
 impl Registers {
     pub fn new() -> Self {
         Self {
-            a: 0x01,
+            a: 0x00,
             b: 0x00,
-            c: 0x13,
+            c: 0x00,
             d: 0x00,
-            e: 0xD8,
-            h: 0x01,
-            l: 0x4D,
-            f: 0xB0,
-            sp: 0xFFFE,
-            pc: 0x0100,
+            e: 0x00,
+            h: 0x00,
+            l: 0x00,
+            f: 0x00,
+            sp: 0x0000,
+            pc: 0x0000,  // Start from boot ROM
         }
     }
 

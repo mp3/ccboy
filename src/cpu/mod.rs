@@ -1,6 +1,9 @@
 mod registers;
 mod instructions;
 mod opcodes;
+mod opcodes_extended;
+mod opcodes_alu;
+mod opcodes_cb;
 
 use registers::Registers;
 use crate::memory::Memory;
@@ -148,5 +151,43 @@ impl Cpu {
         self.registers.set_flag_n(true);
         self.registers.set_flag_h((value & 0xF) == 0);
         result
+    }
+
+    pub fn add_a(&mut self, value: u8) {
+        let (result, carry) = self.registers.a.overflowing_add(value);
+        self.registers.set_flag_z(result == 0);
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h((self.registers.a & 0xF) + (value & 0xF) > 0xF);
+        self.registers.set_flag_c(carry);
+        self.registers.a = result;
+    }
+
+    pub fn adc_a(&mut self, value: u8) {
+        let carry = if self.registers.flag_c() { 1 } else { 0 };
+        let result = self.registers.a.wrapping_add(value).wrapping_add(carry);
+        self.registers.set_flag_z(result == 0);
+        self.registers.set_flag_n(false);
+        self.registers.set_flag_h((self.registers.a & 0xF) + (value & 0xF) + carry > 0xF);
+        self.registers.set_flag_c((self.registers.a as u16) + (value as u16) + (carry as u16) > 0xFF);
+        self.registers.a = result;
+    }
+
+    pub fn sub_a(&mut self, value: u8) {
+        let (result, carry) = self.registers.a.overflowing_sub(value);
+        self.registers.set_flag_z(result == 0);
+        self.registers.set_flag_n(true);
+        self.registers.set_flag_h((self.registers.a & 0xF) < (value & 0xF));
+        self.registers.set_flag_c(carry);
+        self.registers.a = result;
+    }
+
+    pub fn sbc_a(&mut self, value: u8) {
+        let carry = if self.registers.flag_c() { 1 } else { 0 };
+        let result = self.registers.a.wrapping_sub(value).wrapping_sub(carry);
+        self.registers.set_flag_z(result == 0);
+        self.registers.set_flag_n(true);
+        self.registers.set_flag_h((self.registers.a & 0xF) < (value & 0xF) + carry);
+        self.registers.set_flag_c((self.registers.a as u16) < (value as u16) + (carry as u16));
+        self.registers.a = result;
     }
 }

@@ -4,8 +4,11 @@ mod joypad;
 mod memory;
 mod ppu;
 mod timer;
+mod boot_rom;
+mod debug;
 
 use wasm_bindgen::prelude::*;
+pub use debug::CpuState;
 
 #[wasm_bindgen]
 pub struct Emulator {
@@ -45,6 +48,18 @@ impl Emulator {
 
     pub fn key_up(&mut self, key: u8) {
         self.gameboy.key_up(key);
+    }
+    
+    pub fn get_cpu_state(&self) -> CpuState {
+        self.gameboy.get_cpu_state()
+    }
+    
+    pub fn read_memory(&self, address: u16) -> u8 {
+        self.gameboy.read_memory(address)
+    }
+    
+    pub fn write_memory(&mut self, address: u16, value: u8) {
+        self.gameboy.write_memory(address, value);
     }
 }
 
