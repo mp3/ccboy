@@ -103,6 +103,15 @@ The emulator is structured as follows:
 - `boot_rom.rs`: DMG boot ROM data
 - `debug.rs`: Debugging utilities
 
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- [User Guide](docs/USER_GUIDE.md) - How to use the emulator
+- [Game Compatibility](docs/COMPATIBILITY.md) - List of tested games
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [Technical Documentation](docs/TECHNICAL.md) - Architecture and implementation details
+
 ## License
 
 This project is for educational purposes.
