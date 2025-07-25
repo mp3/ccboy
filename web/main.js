@@ -7,6 +7,8 @@ let ctx = null;
 let audioContext = null;
 let audioBufferQueue = [];
 let nextAudioStartTime = 0;
+let audioWorkletNode = null;
+let useAudioWorklet = false;
 
 // UI State
 let isPaused = false;
@@ -18,6 +20,13 @@ let frameCount = 0;
 let currentFPS = 0;
 let currentRomName = null;
 let saveState = null;
+
+// Performance optimization
+let frameSkip = 0;
+let autoFrameSkip = true;
+let targetFPS = 60;
+let frameTimes = [];
+let lastRenderTime = 0;
 
 const KEYS = {
     39: 0, // Right Arrow
@@ -127,6 +136,21 @@ function initializeUI() {
         document.getElementById('fps-counter').style.display = showFPS ? 'block' : 'none';
     });
     
+    // Performance settings
+    const autoFrameskipCheckbox = document.getElementById('auto-frameskip');
+    autoFrameskipCheckbox.addEventListener('change', (e) => {
+        autoFrameSkip = e.target.checked;
+        if (!autoFrameSkip) {
+            frameSkip = 0; // Reset frame skip when disabled
+        }
+    });
+    
+    const maxFrameskipSelect = document.getElementById('max-frameskip');
+    maxFrameskipSelect.addEventListener('change', (e) => {
+        const maxSkip = parseInt(e.target.value);
+        frameSkip = Math.min(frameSkip, maxSkip);
+    });
+    
     const enableAudio = document.getElementById('enable-audio');
     enableAudio.addEventListener('change', (e) => {
         if (audioContext) {
@@ -222,8 +246,12 @@ async function loadRomFile(file) {
     // Initialize audio context on user interaction
     if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)({
-            sampleRate: 44100
+            sampleRate: 44100,
+            latencyHint: 'interactive'  // Lower latency
         });
+        
+        // Try to use AudioWorklet for better performance
+        initAudioWorklet();
     }
     
     // Update UI
@@ -284,22 +312,55 @@ function updateGameInfo(file, romData) {
 }
 
 function runEmulator() {
-    function frame() {
+    let skipFrames = 0;
+    
+    function frame(currentTime) {
         if (!isPaused) {
+            // Calculate frame timing
+            const deltaTime = currentTime - lastRenderTime;
+            lastRenderTime = currentTime;
+            
+            // Auto frame skip calculation
+            if (autoFrameSkip) {
+                frameTimes.push(deltaTime);
+                if (frameTimes.length > 30) {
+                    frameTimes.shift();
+                }
+                
+                const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+                const targetFrameTime = 1000 / targetFPS;
+                
+                if (avgFrameTime > targetFrameTime * 1.2) {
+                    frameSkip = Math.min(3, frameSkip + 1);
+                } else if (avgFrameTime < targetFrameTime * 0.9) {
+                    frameSkip = Math.max(0, frameSkip - 1);
+                }
+            }
+            
             // Run frames based on speed multiplier
             for (let i = 0; i < speedMultiplier; i++) {
                 emulator.run_frame();
             }
             
-            // Render screen
-            const screenData = emulator.get_screen_buffer();
-            const imageData = ctx.createImageData(160, 144);
-            
-            for (let i = 0; i < screenData.length; i++) {
-                imageData.data[i] = screenData[i];
+            // Render screen (with frame skipping)
+            if (skipFrames <= 0) {
+                const screenData = emulator.get_screen_buffer();
+                const imageData = ctx.createImageData(160, 144);
+                
+                // Optimized pixel copy
+                const data = imageData.data;
+                for (let i = 0; i < screenData.length; i += 4) {
+                    data[i] = screenData[i];
+                    data[i + 1] = screenData[i + 1];
+                    data[i + 2] = screenData[i + 2];
+                    data[i + 3] = screenData[i + 3];
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                skipFrames = frameSkip;
+            } else {
+                skipFrames--;
             }
-            
-            ctx.putImageData(imageData, 0, 0);
             
             // Process audio
             if (audioContext && speedMultiplier === 1) {
@@ -318,34 +379,70 @@ function runEmulator() {
         animationId = requestAnimationFrame(frame);
     }
     
-    frame();
+    animationId = requestAnimationFrame(frame);
+}
+
+async function initAudioWorklet() {
+    try {
+        await audioContext.audioWorklet.addModule('audio-processor.js');
+        audioWorkletNode = new AudioWorkletNode(audioContext, 'gameboy-processor');
+        audioWorkletNode.connect(audioContext.destination);
+        useAudioWorklet = true;
+    } catch (e) {
+        console.log('AudioWorklet not supported, using fallback');
+        useAudioWorklet = false;
+    }
 }
 
 function processAudio(audioData) {
+    if (useAudioWorklet && audioWorkletNode) {
+        // Send audio data to worklet for processing
+        audioWorkletNode.port.postMessage({
+            type: 'audioData',
+            data: audioData,
+            volume: volumeLevel
+        });
+    } else {
+        // Fallback to standard Web Audio API
+        processAudioFallback(audioData);
+    }
+}
+
+function processAudioFallback(audioData) {
     const frameCount = audioData.length / 2; // Stereo
     const audioBuffer = audioContext.createBuffer(2, frameCount, 44100);
     
-    // Split stereo data and apply volume
+    // Optimized stereo data split and volume application
+    const leftChannel = audioBuffer.getChannelData(0);
+    const rightChannel = audioBuffer.getChannelData(1);
+    
     for (let i = 0; i < frameCount; i++) {
-        audioBuffer.getChannelData(0)[i] = audioData[i * 2] * volumeLevel;     // Left
-        audioBuffer.getChannelData(1)[i] = audioData[i * 2 + 1] * volumeLevel; // Right
+        const leftSample = audioData[i * 2] * volumeLevel;
+        const rightSample = audioData[i * 2 + 1] * volumeLevel;
+        leftChannel[i] = leftSample;
+        rightChannel[i] = rightSample;
     }
     
-    // Create and schedule buffer
+    // Create and schedule buffer with optimized timing
     const source = audioContext.createBufferSource();
     source.buffer = audioBuffer;
     source.connect(audioContext.destination);
     
     const currentTime = audioContext.currentTime;
-    const startTime = Math.max(currentTime, nextAudioStartTime);
-    source.start(startTime);
+    const bufferDuration = audioBuffer.duration;
     
-    // Update next start time
-    nextAudioStartTime = startTime + audioBuffer.duration;
+    // Better scheduling logic
+    if (nextAudioStartTime < currentTime) {
+        nextAudioStartTime = currentTime + 0.005; // 5ms buffer
+    }
     
-    // Clean up old buffers to prevent memory buildup
-    if (nextAudioStartTime > currentTime + 1.0) {
-        nextAudioStartTime = currentTime + 0.1;
+    source.start(nextAudioStartTime);
+    nextAudioStartTime += bufferDuration;
+    
+    // Prevent audio drift
+    const maxLookahead = 0.1; // 100ms
+    if (nextAudioStartTime > currentTime + maxLookahead) {
+        nextAudioStartTime = currentTime + maxLookahead / 2;
     }
 }
 
@@ -356,7 +453,32 @@ function updateFPS() {
     
     if (deltaTime >= 1000) {
         currentFPS = Math.round((frameCount * 1000) / deltaTime);
-        document.getElementById('fps-counter').textContent = `FPS: ${currentFPS}`;
+        const fpsElement = document.getElementById('fps-counter');
+        
+        // Enhanced performance display
+        let perfInfo = `FPS: ${currentFPS}`;
+        
+        // Add frame skip info
+        if (autoFrameSkip && frameSkip > 0) {
+            perfInfo += ` | Skip: ${frameSkip}`;
+        }
+        
+        // Add average frame time
+        if (frameTimes.length > 0) {
+            const avgFrameTime = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+            perfInfo += ` | ${avgFrameTime.toFixed(1)}ms`;
+        }
+        
+        // Color code based on performance
+        if (currentFPS >= 58) {
+            fpsElement.style.color = '#0F0'; // Green
+        } else if (currentFPS >= 50) {
+            fpsElement.style.color = '#FF0'; // Yellow
+        } else {
+            fpsElement.style.color = '#F00'; // Red
+        }
+        
+        fpsElement.textContent = perfInfo;
         frameCount = 0;
         lastFrameTime = currentTime;
     }

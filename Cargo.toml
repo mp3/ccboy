@@ -5,6 +5,9 @@ edition = "2021"
 authors = ["Game Boy Emulator Team"]
 description = "A Game Boy emulator written in Rust with WebAssembly support"
 
+[package.metadata.wasm-pack]
+wasm-opt = ["-O3"]
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -20,5 +23,16 @@ console_error_panic_hook = "0.1"
 wasm-bindgen-test = "0.3"
 
 [profile.release]
-opt-level = "s"
-lto = true
+opt-level = 3           # Maximum optimization for speed
+lto = "fat"            # Full link-time optimization
+codegen-units = 1      # Single codegen unit for better optimization
+panic = 'abort'        # Smaller binary size
+strip = true           # Strip symbols for smaller size
+
+[profile.release.package."*"]
+opt-level = 3          # Optimize dependencies too
+
+[profile.wasm]
+inherits = "release"
+opt-level = "z"        # Optimize for size in WASM
+lto = "fat"

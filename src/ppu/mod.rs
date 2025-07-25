@@ -34,11 +34,16 @@ pub struct Ppu {
     obp1: u8,
     wy: u8,
     wx: u8,
+    // Performance optimization: pre-computed palette lookups
+    bg_palette_cache: [u8; 4],
+    obp0_palette_cache: [u8; 4],
+    obp1_palette_cache: [u8; 4],
+    palette_dirty: bool,
 }
 
 impl Ppu {
     pub fn new() -> Self {
-        Self {
+        let mut ppu = Self {
             mode: Mode::OamScan,
             cycles: 0,
             line: 0,
@@ -54,7 +59,13 @@ impl Ppu {
             obp1: 0xFF,
             wy: 0,
             wx: 0,
-        }
+            bg_palette_cache: [0; 4],
+            obp0_palette_cache: [0; 4],
+            obp1_palette_cache: [0; 4],
+            palette_dirty: true,
+        };
+        ppu.update_palette_cache();
+        ppu
     }
 
     pub fn update(&mut self, cycles: u8, memory: &mut Memory) {
@@ -121,6 +132,15 @@ impl Ppu {
 
     pub fn get_screen_buffer(&self) -> Vec<u8> {
         self.screen_buffer.clone()
+    }
+    
+    fn update_palette_cache(&mut self) {
+        // Pre-compute palette lookups for each color ID
+        for i in 0..4 {
+            self.bg_palette_cache[i] = TileRenderer::apply_palette(i as u8, self.bgp);
+            self.obp0_palette_cache[i] = TileRenderer::apply_palette(i as u8, self.obp0);
+            self.obp1_palette_cache[i] = TileRenderer::apply_palette(i as u8, self.obp1);
+        }
     }
 
     fn is_lcd_enabled(&self) -> bool {
@@ -221,15 +241,26 @@ impl Ppu {
                 }
             }
             
-            // Apply palette and convert to RGB
-            let shade = TileRenderer::apply_palette(color_id, final_palette);
+            // Use pre-computed palette cache for better performance
+            let shade = if final_palette == self.bgp {
+                self.bg_palette_cache[color_id as usize]
+            } else if final_palette == self.obp0 {
+                self.obp0_palette_cache[color_id as usize]
+            } else {
+                self.obp1_palette_cache[color_id as usize]
+            };
+            
             let rgb = TileRenderer::get_rgb_color(shade);
             
+            // Direct memory write for better performance
             let pixel_offset = (self.line as usize * SCREEN_WIDTH + x) * 4;
-            self.screen_buffer[pixel_offset] = rgb[0];
-            self.screen_buffer[pixel_offset + 1] = rgb[1];
-            self.screen_buffer[pixel_offset + 2] = rgb[2];
-            self.screen_buffer[pixel_offset + 3] = 255;
+            unsafe {
+                let ptr = self.screen_buffer.as_mut_ptr().add(pixel_offset);
+                *ptr = rgb[0];
+                *ptr.add(1) = rgb[1];
+                *ptr.add(2) = rgb[2];
+                *ptr.add(3) = 255;
+            }
         }
     }
 
@@ -266,9 +297,17 @@ impl Ppu {
         self.scx = memory.read_byte(0xFF43);
         self.ly = self.line;
         self.lyc = memory.read_byte(0xFF45);
-        self.bgp = memory.read_byte(0xFF47);
-        self.obp0 = memory.read_byte(0xFF48);
-        self.obp1 = memory.read_byte(0xFF49);
+        let new_bgp = memory.read_byte(0xFF47);
+        let new_obp0 = memory.read_byte(0xFF48);
+        let new_obp1 = memory.read_byte(0xFF49);
+        
+        // Update palette cache if palettes changed
+        if new_bgp != self.bgp || new_obp0 != self.obp0 || new_obp1 != self.obp1 {
+            self.bgp = new_bgp;
+            self.obp0 = new_obp0;
+            self.obp1 = new_obp1;
+            self.update_palette_cache();
+        }
         self.wy = memory.read_byte(0xFF4A);
         self.wx = memory.read_byte(0xFF4B);
 

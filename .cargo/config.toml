@@ -1,0 +1,8 @@
+[target.wasm32-unknown-unknown]
+rustflags = [
+    "-C", "target-cpu=generic",
+    "-C", "overflow-checks=no",        # Disable overflow checks in release
+]
+
+[build]
+target = "wasm32-unknown-unknown"
