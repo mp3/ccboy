@@ -1,18 +1,19 @@
 use super::*;
 use crate::memory::cartridge::Cartridge;
 use crate::boot_rom::DMG_BOOT_ROM;
+use crate::save_state::MbcSaveState;
 
 pub struct Memory {
     #[allow(dead_code)]
     rom: Vec<u8>,
-    vram: [u8; VRAM_SIZE],
-    wram: [u8; WRAM_SIZE],
-    oam: [u8; OAM_SIZE],
-    io: [u8; IO_SIZE],
-    hram: [u8; HRAM_SIZE],
+    pub(crate) vram: [u8; VRAM_SIZE],
+    pub(crate) wram: [u8; WRAM_SIZE],
+    pub(crate) oam: [u8; OAM_SIZE],
+    pub(crate) io: [u8; IO_SIZE],
+    pub(crate) hram: [u8; HRAM_SIZE],
     interrupt_enable: u8,
     interrupt_flag: u8,
-    cartridge: Option<Cartridge>,
+    pub(crate) cartridge: Option<Cartridge>,
     boot_rom_enabled: bool,
 }
 
@@ -118,5 +119,90 @@ impl Memory {
 
     pub fn update_joypad(&mut self, state: u8) {
         self.io[0] = state;
+    }
+    
+    // Save state methods
+    pub fn get_vram(&self) -> &[u8] {
+        &self.vram
+    }
+    
+    pub fn get_wram(&self) -> &[u8] {
+        &self.wram
+    }
+    
+    pub fn get_oam(&self) -> &[u8] {
+        &self.oam
+    }
+    
+    pub fn get_io(&self) -> &[u8] {
+        &self.io
+    }
+    
+    pub fn get_hram(&self) -> &[u8] {
+        &self.hram
+    }
+    
+    pub fn is_boot_rom_enabled(&self) -> bool {
+        self.boot_rom_enabled
+    }
+    
+    pub fn get_cartridge_ram(&self) -> Vec<u8> {
+        if let Some(cartridge) = &self.cartridge {
+            cartridge.get_ram_data()
+        } else {
+            Vec::new()
+        }
+    }
+    
+    pub fn get_cartridge_ram_vec(&self) -> Option<Vec<u8>> {
+        self.cartridge.as_ref().map(|c| c.get_ram_data())
+    }
+    
+    pub fn get_mbc_state(&self) -> MbcSaveState {
+        if let Some(cartridge) = &self.cartridge {
+            cartridge.get_mbc_state()
+        } else {
+            MbcSaveState {
+                rom_bank: 1,
+                ram_bank: 0,
+                ram_enabled: false,
+            }
+        }
+    }
+    
+    pub fn set_vram(&mut self, data: &[u8]) {
+        self.vram.copy_from_slice(data);
+    }
+    
+    pub fn set_wram(&mut self, data: &[u8]) {
+        self.wram.copy_from_slice(data);
+    }
+    
+    pub fn set_oam(&mut self, data: &[u8]) {
+        self.oam.copy_from_slice(data);
+    }
+    
+    pub fn set_io(&mut self, data: &[u8]) {
+        self.io.copy_from_slice(data);
+    }
+    
+    pub fn set_hram(&mut self, data: &[u8]) {
+        self.hram.copy_from_slice(data);
+    }
+    
+    pub fn set_boot_rom_enabled(&mut self, enabled: bool) {
+        self.boot_rom_enabled = enabled;
+    }
+    
+    pub fn load_cartridge_ram(&mut self, data: &[u8]) {
+        if let Some(cartridge) = &mut self.cartridge {
+            cartridge.load_ram_data(data);
+        }
+    }
+    
+    pub fn set_mbc_state(&mut self, state: &MbcSaveState) {
+        if let Some(cartridge) = &mut self.cartridge {
+            cartridge.set_mbc_state(state);
+        }
     }
 }

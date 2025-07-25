@@ -5,36 +5,179 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Boy Emulator</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <h1>Game Boy Emulator</h1>
-        <div class="emulator">
-            <canvas id="screen" width="160" height="144"></canvas>
-            <div class="controls">
-                <input type="file" id="rom-input" accept=".gb,.gbc">
-                <button id="load-rom">Load ROM</button>
+        <header>
+            <h1><i class="fas fa-gamepad"></i> Game Boy Emulator</h1>
+            <div class="header-controls">
+                <button id="fullscreen-btn" class="icon-btn" title="Fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button id="settings-btn" class="icon-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="emulator-section">
+                <div class="emulator">
+                    <div class="screen-container">
+                        <canvas id="screen" width="160" height="144"></canvas>
+                        <div id="rom-drop-zone" class="rom-drop-zone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drop ROM file here or click to browse</p>
+                            <input type="file" id="rom-input" accept=".gb,.gbc" style="display: none;">
+                        </div>
+                    </div>
+                    
+                    <div class="emulator-controls">
+                        <div class="control-group">
+                            <button id="pause-btn" class="control-btn" disabled>
+                                <i class="fas fa-pause"></i> Pause
+                            </button>
+                            <button id="reset-btn" class="control-btn" disabled>
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                            <button id="save-state-btn" class="control-btn" disabled>
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                            <button id="load-state-btn" class="control-btn" disabled>
+                                <i class="fas fa-folder-open"></i> Load
+                            </button>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="speed-control">Speed:</label>
+                            <select id="speed-control" disabled>
+                                <option value="0.5">0.5x</option>
+                                <option value="1" selected>1x</option>
+                                <option value="2">2x</option>
+                                <option value="4">4x</option>
+                            </select>
+                            
+                            <label for="volume-control">Volume:</label>
+                            <input type="range" id="volume-control" min="0" max="100" value="50" disabled>
+                            <span id="volume-value">50%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mobile-controls" id="mobile-controls">
+                    <div class="dpad">
+                        <button class="dpad-btn dpad-up" data-key="ArrowUp"><i class="fas fa-caret-up"></i></button>
+                        <button class="dpad-btn dpad-right" data-key="ArrowRight"><i class="fas fa-caret-right"></i></button>
+                        <button class="dpad-btn dpad-down" data-key="ArrowDown"><i class="fas fa-caret-down"></i></button>
+                        <button class="dpad-btn dpad-left" data-key="ArrowLeft"><i class="fas fa-caret-left"></i></button>
+                        <div class="dpad-center"></div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="action-btn" data-key="x">B</button>
+                        <button class="action-btn" data-key="z">A</button>
+                    </div>
+                    
+                    <div class="system-buttons">
+                        <button class="system-btn" data-key="Shift">SELECT</button>
+                        <button class="system-btn" data-key="Enter">START</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <div class="game-info" id="game-info" style="display: none;">
+                    <h3>Game Information</h3>
+                    <p><strong>Title:</strong> <span id="game-title">-</span></p>
+                    <p><strong>Cartridge:</strong> <span id="game-cartridge">-</span></p>
+                    <p><strong>Size:</strong> <span id="game-size">-</span></p>
+                </div>
+                
+                <div class="keyboard-controls">
+                    <h3><i class="fas fa-keyboard"></i> Keyboard Controls</h3>
+                    <div class="control-grid">
+                        <div class="control-item">
+                            <span class="key">↑ ↓ ← →</span>
+                            <span class="label">D-Pad</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">Z</span>
+                            <span class="label">A Button</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">X</span>
+                            <span class="label">B Button</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">Enter</span>
+                            <span class="label">Start</span>
+                        </div>
+                        <div class="control-item">
+                            <span class="key">Shift</span>
+                            <span class="label">Select</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="instructions">
-            <h2>Controls</h2>
-            <ul>
-                <li>Arrow Keys: D-Pad</li>
-                <li>Z: A Button</li>
-                <li>X: B Button</li>
-                <li>Enter: Start</li>
-                <li>Shift: Select</li>
-            </ul>
-            <h2>Features</h2>
-            <ul>
-                <li>Complete CPU emulation</li>
-                <li>Accurate PPU rendering</li>
-                <li>4-channel audio (APU)</li>
-                <li>MBC1/3/5 cartridge support</li>
-                <li>Boot ROM included</li>
-            </ul>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <h3>Display</h3>
+                    <label>
+                        <input type="checkbox" id="pixel-perfect" checked>
+                        Pixel Perfect Scaling
+                    </label>
+                    <label>
+                        <input type="checkbox" id="show-fps">
+                        Show FPS Counter
+                    </label>
+                </div>
+                
+                <div class="setting-group">
+                    <h3>Audio</h3>
+                    <label>
+                        <input type="checkbox" id="enable-audio" checked>
+                        Enable Audio
+                    </label>
+                    <label>
+                        Audio Latency:
+                        <select id="audio-latency">
+                            <option value="low">Low</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="high">High</option>
+                        </select>
+                    </label>
+                </div>
+                
+                <div class="setting-group">
+                    <h3>Save Data</h3>
+                    <button id="export-save" class="control-btn">
+                        <i class="fas fa-download"></i> Export Save
+                    </button>
+                    <button id="import-save" class="control-btn">
+                        <i class="fas fa-upload"></i> Import Save
+                    </button>
+                    <button id="clear-save" class="control-btn danger">
+                        <i class="fas fa-trash"></i> Clear Save Data
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
+    
+    <!-- FPS Counter -->
+    <div id="fps-counter" class="fps-counter" style="display: none;">FPS: 0</div>
+    
     <script type="module" src="main.js"></script>
 </body>
 </html>

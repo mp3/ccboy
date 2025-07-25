@@ -7,6 +7,7 @@ mod timer;
 mod boot_rom;
 mod debug;
 mod apu;
+mod save_state;
 
 use wasm_bindgen::prelude::*;
 pub use debug::CpuState;
@@ -65,6 +66,34 @@ impl Emulator {
     
     pub fn get_audio_buffer(&mut self) -> Vec<f32> {
         self.gameboy.get_audio_buffer()
+    }
+    
+    pub fn get_save_state(&self) -> JsValue {
+        match self.gameboy.get_save_state() {
+            Ok(state_json) => JsValue::from_str(&state_json),
+            Err(e) => {
+                web_sys::console::error_1(&format!("Failed to create save state: {}", e).into());
+                JsValue::NULL
+            }
+        }
+    }
+    
+    pub fn load_save_state(&mut self, state: &str) -> bool {
+        match self.gameboy.load_save_state(state) {
+            Ok(_) => true,
+            Err(e) => {
+                web_sys::console::error_1(&format!("Failed to load save state: {}", e).into());
+                false
+            }
+        }
+    }
+    
+    pub fn get_save_data(&self) -> Vec<u8> {
+        self.gameboy.get_save_data()
+    }
+    
+    pub fn load_save_data(&mut self, data: &[u8]) {
+        self.gameboy.load_save_data(data);
     }
 }
 

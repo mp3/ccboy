@@ -1,3 +1,5 @@
+use crate::save_state::MbcSaveState;
+
 pub struct Cartridge {
     rom: Vec<u8>,
     ram: Vec<u8>,
@@ -123,5 +125,30 @@ impl Cartridge {
             0x4000..=0x5FFF => self.ram_bank = (value & 0x0F) as usize,
             _ => {}
         }
+    }
+    
+    // Save state methods
+    pub fn get_ram_data(&self) -> Vec<u8> {
+        self.ram.clone()
+    }
+    
+    pub fn load_ram_data(&mut self, data: &[u8]) {
+        if data.len() == self.ram.len() {
+            self.ram.copy_from_slice(data);
+        }
+    }
+    
+    pub fn get_mbc_state(&self) -> MbcSaveState {
+        MbcSaveState {
+            rom_bank: self.rom_bank,
+            ram_bank: self.ram_bank,
+            ram_enabled: self.ram_enabled,
+        }
+    }
+    
+    pub fn set_mbc_state(&mut self, state: &MbcSaveState) {
+        self.rom_bank = state.rom_bank;
+        self.ram_bank = state.ram_bank;
+        self.ram_enabled = state.ram_enabled;
     }
 }
